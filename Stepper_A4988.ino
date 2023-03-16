@@ -1,9 +1,7 @@
 /* Demo of A4988 micro-stepping motor driver
    Arduino Uno
    Arduino IDE 1.8.10
-
    Uses button debounce library  https://github.com/thomasfredericks/Bounce2
-
    Gadget Reboot
 */
 
@@ -26,7 +24,7 @@
 
 // create debounce instances for 3 buttons
 Bounce dirIn   = Bounce();  // motor direction toggle
-Bounce runIn   = Bounce();  // motor run for 200 steps
+Bounce runIn   = Bounce();  // motor run until button is pressed again
 Bounce msIn    = Bounce();  // cycle through microstep options
 
 // list of microstep config pin outputs in binary notation B[MS1][MS2][MS3]
@@ -40,6 +38,8 @@ byte microSteps[5] = {
 
 // start with full stepping:  microSteps[0] gives MS1=0 MS2=0 MS3=0
 byte msMode = 0;
+
+bool motorRunning = false;
 
 void setup() {
 
@@ -65,6 +65,7 @@ void setup() {
   pinMode(motMS3Pin, OUTPUT);
 
 }
+
 void loop() {
   // update button debounce status
   dirIn.update();
@@ -77,18 +78,21 @@ void loop() {
     digitalWrite(motDirPin, !digitalRead(motDirPin));
   }
 
-  // run motor for 200 steps
-  if (runIn.fell()) {
-    for (int i = 0; i < 200; i++) {
-      // read pot and set a delay to control speed
-      int motSpeed = map(analogRead(speedPot), 0, 1023, 5000, 200);
+  // set motorRunning to true when button status changes
+  if (runIn.changed()) {
+    motorRunning = !motorRunning;
+  }
 
-      // advance motor one step at the pot delay setting/speed
-      digitalWrite(motStepPin, HIGH);
-      delayMicroseconds(motSpeed);
-      digitalWrite(motStepPin, LOW);
-      delayMicroseconds(motSpeed);
-    }
+  // run motor if motorRunning is true
+  if (motorRunning) {
+    // read pot and set a delay to control speed
+    int motSpeed = map(analogRead(speedPot), 0, 1023, 5000, 200);
+
+    // advance motor one step at the pot delay setting/speed
+    digitalWrite(motStepPin, HIGH);
+    delayMicroseconds(motSpeed);
+    digitalWrite(motStepPin, LOW);
+    delayMicroseconds(motSpeed);
   }
 
   // cycle through micro step configuration options
@@ -100,3 +104,4 @@ void loop() {
     digitalWrite(motMS3Pin, bitRead(microSteps[msMode], 0));
   }
 }
+
